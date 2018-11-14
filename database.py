@@ -79,13 +79,6 @@ class Database:
 
         self.cursor.execute('INSERT INTO secrets(receiver, participant_id) VALUES(?, ?)', (receiver, sender_id))
 
-    def update_sended(self):
-
-        now = self.now
-        for receiver in self.receivers:
-            self.cursor.execute("""UPDATE secrets SET sended = ? 
-                WHERE receiver = ?""", (now, receiver[0]))
-
     def event_exists(self, name):
 
         self.cursor.execute("SELECT EXISTS(SELECT 1 FROM events WHERE name = ?)", (name, ))
@@ -110,6 +103,16 @@ class Database:
             INNER JOIN secrets as s ON p.id = s.participant_id WHERE p.event_id = ?""", (event_id,))
 
         return self.cursor.fetchall()
+
+    def secret_for(self, event_name, name):
+
+        event_id = self.id_by_name(name=event_name, table_name='events')
+
+        self.cursor.execute("""SELECT p.email, s.receiver FROM participants AS p 
+            INNER JOIN secrets as s ON p.id = s.participant_id WHERE p.event_id = ? 
+            AND p.name = ?""", (event_id, name))
+
+        return self.cursor.fetchall()[0]
 
     @property
     def events(self):
