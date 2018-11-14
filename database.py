@@ -24,8 +24,6 @@ class Database:
     def __exit__(self, exc_type, exc_value, traceback):
         #TODO add logging if something went wrong.
 
-        print(exc_type, exc_value, traceback)
-
         if not exc_type:
             self.conn.commit()
 
@@ -41,7 +39,7 @@ class Database:
             added TEXT)""")
 
         cursor.execute("""CREATE TABLE IF NOT EXISTS participants 
-            (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT UNIQUE,
+            (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT,
             event_id INTEGER REFERENCES events(id))""")
 
         cursor.execute("""CREATE TABLE IF NOT EXISTS secrets 
@@ -62,6 +60,8 @@ class Database:
         self.cursor.execute("""UPDATE events SET name = ?, date = ?, added = ? 
             WHERE id = ?""", (name, date, self.now, added_id))
 
+        return name
+
     def add_participants(self, event_name, *participants):
 
         event_id = self.id_by_name(name=event_name, table_name='events')
@@ -70,9 +70,12 @@ class Database:
         self.cursor.executemany("""INSERT INTO participants(name, email, event_id) 
             values (?, ?, ?)""", content)
 
-    def add_secret(self, sender, receiver):
+    def add_secret(self, event_name, sender, receiver):
 
-        sender_id = self.id_by_name(name=sender, table_name='participants')
+        event_id = self.id_by_name(name=event_name, table_name='events')
+
+        self.cursor.execute("SELECT id FROM participants WHERE event_id = ? AND name = ?", (event_id, sender))
+        sender_id = self.cursor.fetchall()[0][0]
 
         self.cursor.execute('INSERT INTO secrets(receiver, participant_id) VALUES(?, ?)', (receiver, sender_id))
 
@@ -95,9 +98,8 @@ class Database:
         result = self.cursor.fetchall()
 
         if len(result) > 1:
-            raise AssertionError('Received a multiple ids for participants')
+            raise AssertionError('Received a multiple ids for {}'.format(name))
 
-        print(result)
         return result[0][0]
 
     def email_content(self, event_name):
@@ -110,12 +112,15 @@ class Database:
         return self.cursor.fetchall()
 
     @property
+    def events(self):
+        self.cursor.execute('SELECT name FROM events')
+        return self.cursor.fetchall()
+
+    @property
     def receivers(self):
         self.cursor.execute("SELECT receiver FROM secrets")
-
         return self.cursor.fetchall()
 
     @property
     def now(self):
-
         return datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S')
