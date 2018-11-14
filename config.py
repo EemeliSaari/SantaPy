@@ -3,15 +3,13 @@ import os
 import sqlite3
 
 
-FILENAME = 'santa_participants.json'
-
-def setup(database):
-    if not os.path.exists(FILENAME):
+def setup(participants, database):
+    if not os.path.exists(participants):
         error = 'Setup file for Secret Santa does not exists. '
-        error += 'Provide file: {}'.format(FILENAME)
+        error += 'Provide file: {}'.format(participants)
         raise OSError(error)
 
-    with open(FILENAME) as f:
+    with open(participants) as f:
         js = json.load(f)
 
     validate_participants(js)
