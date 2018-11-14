@@ -29,4 +29,7 @@ class Sender(smtplib.SMTP):
 
     def sendmail(self, email_to, msg, mail_options = []):
 
-        super(Sender, self).sendmail(self.__email, email_to, msg, mail_options)
+        msg.From = self.__email
+        msg.To = email_to
+
+        super(Sender, self).sendmail(self.__email, email_to, str(msg), mail_options)
